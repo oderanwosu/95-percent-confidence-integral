@@ -1,0 +1,93 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+## Libraries
+
+```{r}
+library(lubridate)
+library(dplyr)
+library(ggplot2)
+library(httr)
+```
+
+## Data set
+
+```{r}
+airqualityNewYorkFile <- "aqnys.csv"
+aqiny <- read.csv(paste("./", airqualityNewYorkFile, sep=''), header=TRUE)
+
+```
+
+### Configurations
+
+```{r}
+#format both data frames dates
+aqiny$date <- ymd(aqiny$date)
+
+##Clear out empty entries 
+aqiny_filter <- na.omit(aqiny$no2)
+```
+
+My data set is from <https://aqicn.org/city/usa/newyork/> which gives me the AQI score of different cities air quality. This week I focus on the AQI for nitrogren dioxide (no2) in New York US in the 86 months. This is because not all the data points for no2 AQI are there so it's impossible to know the true population average. The next best option would then be to find a confidence integral.
+
+Therefore, my population is all AQI for no2 in the last 86 months for New York. My sample is random days which do contain a measurement for all AQI scores concerning my data set.
+
+```{r}
+#getting sample of nitrogen oxide AQI measurements 
+n = length(aqiny_filter)
+sample_aqi <-aqiny_filter
+```
+
+Checking assumptions
+
+1.  Random Sample - I believe my data does not meet the conditions to be random. Because my data starts from a specific date, I would imagine that it may not be equal to the actual value.
+2.  n \>= 40 or data is normally distributed - Typically, particles distributions are skewed right and that also aligns with the distribution of measurements for particulate matter last week (what AQI is based off of). However, my n value is greater than 40 so this condition is checked off.
+3.  Access to the true standard deviation - Because the original data set does not contain all of the AQI measurements for nitrogen dioxide it is impossible to know the true standard deviation.
+
+So, after checking my assumptions, I can build a 95% confidence integral to capture my true AQI mean for nitrogen dioxide.
+
+```{r}
+q <- .99
+paste("Trials or n:", n)
+df <- n - 1
+paste("Degrees of freedom:", df)
+
+s <- sd(sample_aqi)
+paste("sample standard deviation:", s)
+
+se <- s/sqrt(n)
+paste("standard error:", se)
+
+t <- qt((1-q)/2, df, lower.tail = FALSE )
+paste("t-score:", t)
+
+me <- t*se
+paste("margin of error:", me)
+
+x <- mean(sample_aqi)
+paste("sample mean:", x)
+
+lowerbound <- x - me
+upperbound <- x + me
+paste("bounds: [", lowerbound, ",", upperbound, "]")
+
+```
+
+Interpreting our data, we can say we are 95% confident that the true average AQI score of no2 in New York during the last 86 months lies between 12.1715823767963 and 12.9411390402729.
+
+This makes sense as AQI measures are pretty low in New York in compared to the index that can range from 0 to 300+.
+
+```{r}
+
+#standard_error <- (1.224/sqrt(29))
+  
+#t <- (3.651 - 4)/standard_error
+z <- ((15/100) - .10)/sqrt((.1*.9)/100)
+
+#2*pt(t, 29)
+
+
+pnorm(z, mean = 0, sd = 1, lower.tail = FALSE)
+```
